@@ -1,0 +1,16 @@
+# Exclude large FFmpeg files from Railway deployment
+ffmpeg-8.0/
+ffmpeg-extracted/
+uploads/
+projects/
+*.db
+*.sqlite
+*.sqlite3
+
+# Development files
+node_modules/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db

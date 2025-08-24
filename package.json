@@ -4,8 +4,8 @@
   "description": "AI-Powered Video Editing Dashboard with Guest Usage & Subscription System",
   "main": "backend/server.js",
   "scripts": {
-    "start": "node start.js",
-    "dev": "nodemon start.js",
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
     "setup": "node backend/database.js",
     "test": "node test-deployment.js",
     "install-deps": "npm install && cd backend && npm install"
