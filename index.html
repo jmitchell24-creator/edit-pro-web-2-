@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Quick - AI Video Editing</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #4ecdc4;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .style-tags {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tag {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        /* Surprise Section */
+        .surprise-section {
+            padding: 60px 0;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .surprise-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .surprise-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .surprise-title {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: bounce 2s infinite;
+        }
+
+        .surprise-text {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            font-weight: 600;
+        }
+
+        .surprise-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        .surprise-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s;
+        }
+
+        .surprise-item:hover {
+            transform: translateY(-5px) scale(1.05);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .surprise-emoji {
+            display: block;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .surprise-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .surprise-subtitle {
+            font-size: 1.2rem;
+            font-weight: 500;
+            opacity: 0.9;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        /* Upload Section */
+        .upload-section {
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #4ecdc4;
+            border-radius: 15px;
+            padding: 3rem;
+            margin: 2rem 0;
+            background: rgba(78, 205, 196, 0.1);
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        /* AI Options */
+        .ai-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .ai-option {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .ai-option select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+
+        /* Process Button */
+        .process-btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 2rem;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2rem 0;
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4ecdc4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav class="container">
+            <div class="logo">Edit Quick</div>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#upload">Upload</a>
+                <a href="#about">About</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero fade-in">
+        <div class="container">
+            <h1>AI-Powered Video Editing</h1>
+            <p>Transform your raw footage into professional videos in minutes with advanced AI technology</p>
+            <div class="cta-buttons">
+                <a href="#upload" class="btn btn-primary">Start Editing Now</a>
+                <a href="#features" class="btn btn-secondary">Learn More</a>
+            </div>
+        </div>
+        
+        <!-- Background Elements -->
+        <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        </div>
+    </section>
+
+    <!-- SURPRISE Section -->
+    <section class="surprise-section fade-in">
+        <div class="container">
+            <div class="surprise-content">
+                <h2 class="surprise-title">🎉 SURPRISE! 🎉</h2>
+                <p class="surprise-text">Our AI can do ANYTHING you imagine!</p>
+                <div class="surprise-grid">
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">🔥</span>
+                        <span class="surprise-label">MrBeast Style</span>
+                    </div>
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">🎬</span>
+                        <span class="surprise-label">Hollywood</span>
+                    </div>
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">🚨</span>
+                        <span class="surprise-label">Breaking News</span>
+                    </div>
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">💪</span>
+                        <span class="surprise-label">Motivational</span>
+                    </div>
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">😂</span>
+                        <span class="surprise-label">Meme Style</span>
+                    </div>
+                    <div class="surprise-item">
+                        <span class="surprise-emoji">🎭</span>
+                        <span class="surprise-label">Documentary</span>
+                    </div>
+                </div>
+                <p class="surprise-subtitle">And SO MUCH MORE! Just describe what you want!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features fade-in">
+        <div class="container">
+            <h2 class="section-title">Why Choose Edit Quick?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎬</div>
+                    <h3>AI Scene Detection</h3>
+                    <p>Automatically identify and edit scenes with intelligent cuts and transitions</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎨</div>
+                    <h3>Smart Color Grading</h3>
+                    <p>Professional color correction and cinematic grading powered by AI</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎵</div>
+                    <h3>Music Sync</h3>
+                    <p>Perfect synchronization of cuts and effects with music beats</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Process videos in minutes, not hours. Get results instantly</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Multiple Styles</h3>
+                    <p>Choose from cinematic, social media, vlog, and corporate styles</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Easy Export</h3>
+                    <p>Download in multiple formats ready for any platform</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Editing Styles Showcase -->
+    <section class="features fade-in">
+        <div class="container">
+            <h2 class="section-title">Choose Your Style - ANYTHING IS POSSIBLE!</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🔥</div>
+                    <h3>MrBeast-Punchy</h3>
+                    <p>High-energy, fast-paced cuts with dramatic effects, perfect for viral content and challenges</p>
+                    <div class="style-tags">
+                        <span class="tag">Fast Cuts</span>
+                        <span class="tag">Dramatic</span>
+                        <span class="tag">Viral</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎬</div>
+                    <h3>Cinematic (Hollywood)</h3>
+                    <p>Professional movie-style editing with dramatic lighting, color grading, and epic transitions</p>
+                    <div class="style-tags">
+                        <span class="tag">Professional</span>
+                        <span class="tag">Epic</span>
+                        <span class="tag">Movie Quality</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📹</div>
+                    <h3>Cinematic Vlog</h3>
+                    <p>Story-driven vlogs with smooth transitions, beautiful b-roll, and engaging pacing</p>
+                    <div class="style-tags">
+                        <span class="tag">Storytelling</span>
+                        <span class="tag">Smooth</span>
+                        <span class="tag">Engaging</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎙️</div>
+                    <h3>Podcast/Interview</h3>
+                    <p>Clean, professional editing with multiple camera angles and smooth transitions</p>
+                    <div class="style-tags">
+                        <span class="tag">Professional</span>
+                        <span class="tag">Clean</span>
+                        <span class="tag">Multi-cam</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>Tutorial/Explainer</h3>
+                    <p>Clear, educational content with helpful graphics, text overlays, and smooth pacing</p>
+                    <div class="style-tags">
+                        <span class="tag">Educational</span>
+                        <span class="tag">Clear</span>
+                        <span class="tag">Graphics</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💪</div>
+                    <h3>Motivational Quote</h3>
+                    <p>Inspirational content with powerful text overlays, dramatic music, and emotional impact</p>
+                    <div class="style-tags">
+                        <span class="tag">Inspirational</span>
+                        <span class="tag">Emotional</span>
+                        <span class="tag">Text Focus</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎉</div>
+                    <h3>SURPRISE!</h3>
+                    <p>Unexpected, shocking edits with sudden cuts, effects, and attention-grabbing moments</p>
+                    <div class="style-tags">
+                        <span class="tag">Shocking</span>
+                        <span class="tag">Attention</span>
+                        <span class="tag">Unexpected</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">😂</div>
+                    <h3>Meme Reaction</h3>
+                    <p>Fun, viral-style editing with meme overlays, quick cuts, and comedic timing</p>
+                    <div class="style-tags">
+                        <span class="tag">Funny</span>
+                        <span class="tag">Viral</span>
+                        <span class="tag">Meme Style</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚨</div>
+                    <h3>BREAKING NEWS</h3>
+                    <p>Urgent, dramatic news style with bold graphics, urgent music, and attention-grabbing effects</p>
+                    <div class="style-tags">
+                        <span class="tag">Urgent</span>
+                        <span class="tag">Dramatic</span>
+                        <span class="tag">News Style</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📰</div>
+                    <h3>News Report</h3>
+                    <p>Professional news broadcasting style with clean graphics, smooth transitions, and authoritative feel</p>
+                    <div class="style-tags">
+                        <span class="tag">Professional</span>
+                        <span class="tag">Clean</span>
+                        <span class="tag">Authoritative</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎭</div>
+                    <h3>Documentary</h3>
+                    <p>Cinematic documentary style with beautiful cinematography, smooth narration, and immersive feel</p>
+                    <div class="style-tags">
+                        <span class="tag">Cinematic</span>
+                        <span class="tag">Immersive</span>
+                        <span class="tag">Narrative</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Social Media</h3>
+                    <p>Optimized for Instagram, TikTok, and YouTube Shorts with vertical format and trending effects</p>
+                    <div class="style-tags">
+                        <span class="tag">Vertical</span>
+                        <span class="tag">Trending</span>
+                        <span class="tag">Social</span>
+                    </div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎮</div>
+                    <h3>Video Game Style</h3>
+                    <p>Fast-paced, action-packed editing with cinematic effects, HUD overlays, and high-energy music</p>
+                    <div class="style-tags">
+                        <span class="tag">Fast-Paced</span>
+                        <span class="tag">Action</span>
+                        <span class="tag">Gaming</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload Section -->
+    <section id="upload" class="upload-section fade-in">
+        <div class="container">
+            <h2 class="section-title">Start Your Project</h2>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <div class="upload-icon">📁</div>
+                <h3>Upload Your Video</h3>
+                <p>Click here to select your video file or drag and drop</p>
+                <input type="file" id="fileInput" accept="video/*" style="display: none;" onchange="handleFileSelect(event)">
+            </div>
+
+            <div class="ai-options">
+                <div class="ai-option">
+                    <h4>Editing Style</h4>
+                    <select id="styleSelect">
+                        <option value="cinematic">🎬 Cinematic (Hollywood)</option>
+                        <option value="mrbeast">🔥 MrBeast-Punchy</option>
+                        <option value="vlog">📹 Cinematic Vlog</option>
+                        <option value="podcast">🎙️ Podcast/Interview</option>
+                        <option value="tutorial">📚 Tutorial/Explainer</option>
+                        <option value="motivational">💪 Motivational Quote</option>
+                        <option value="surprise">🎉 SURPRISE!</option>
+                        <option value="meme">😂 Meme Reaction</option>
+                        <option value="breaking">🚨 BREAKING NEWS</option>
+                        <option value="news">📰 News Report</option>
+                        <option value="documentary">🎭 Documentary</option>
+                        <option value="videogame">🎮 Video Game Style</option>
+                        <option value="social">📱 Social Media</option>
+                        <option value="corporate">💼 Corporate</option>
+                        <option value="music">🎵 Music Video</option>
+                    </select>
+                </div>
+                <div class="ai-option">
+                    <h4>AI Intensity</h4>
+                    <select id="intensitySelect">
+                        <option value="light">✨ Light (Subtle edits)</option>
+                        <option value="medium">⚡ Medium (Balanced)</option>
+                        <option value="high">🚀 High (Creative transformation)</option>
+                        <option value="extreme">💥 Extreme (MrBeast level!)</option>
+                    </select>
+                </div>
+                <div class="ai-option">
+                    <h4>Output Quality</h4>
+                    <select id="qualitySelect">
+                        <option value="720p">📺 720p (Fast)</option>
+                        <option value="1080p">🎬 1080p (Standard)</option>
+                        <option value="4k">🎭 4K (Premium)</option>
+                        <option value="8k">🌟 8K (Ultra Premium)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="process-btn" onclick="startProcessing()">🚀 Start AI Processing</button>
+
+            <!-- Loading Animation -->
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <h3>AI is working its magic...</h3>
+                <p>This usually takes 3-5 minutes</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="features fade-in">
+        <div class="container">
+            <h2 class="section-title">About Edit Quick</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <h3>Our Mission</h3>
+                    <p>To democratize professional video editing by making AI-powered tools accessible to everyone</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Technology</h3>
+                    <p>Built with cutting-edge AI models for scene detection, color grading, and intelligent editing</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Community</h3>
+                    <p>Join thousands of creators who trust Edit Quick for their video projects</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Edit Quick. AI-powered video editing for creators.</p>
+        </div>
+    </footer>
+
+    <script>
+        // File handling
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const uploadArea = document.querySelector('.upload-area');
+                uploadArea.innerHTML = `
+                    <div class="upload-icon">✅</div>
+                    <h3>File Selected!</h3>
+                    <p>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
+                    <small>Click to change file</small>
+                `;
+                uploadArea.onclick = () => document.getElementById('fileInput').click();
+            }
+        }
+
+        // Processing simulation
+        function startProcessing() {
+            const loading = document.getElementById('loading');
+            const processBtn = document.querySelector('.process-btn');
+            
+            // Show loading
+            loading.style.display = 'block';
+            processBtn.style.display = 'none';
+            
+            // Simulate processing
+            setTimeout(() => {
+                loading.innerHTML = `
+                    <div style="color: #4ecdc4; font-size: 3rem;">🎉</div>
+                    <h3>Processing Complete!</h3>
+                    <p>Your video is ready for download</p>
+                    <button class="btn btn-primary" onclick="downloadVideo()">📥 Download Video</button>
+                `;
+            }, 3000);
+        }
+
+        // Download simulation
+        function downloadVideo() {
+            alert('🎬 Your AI-edited video is ready! In a real app, this would download your processed video.');
+            location.reload(); // Reset the form
+        }
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('section').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
