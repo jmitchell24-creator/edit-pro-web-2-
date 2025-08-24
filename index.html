@@ -406,6 +406,8 @@
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#upload">Upload</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="sports-mixtape.html">🏀 Sports Mixtape</a>
                 <a href="#about">About</a>
             </div>
         </nav>
@@ -500,6 +502,11 @@
                     <div class="feature-icon">🚀</div>
                     <h3>Easy Export</h3>
                     <p>Download in multiple formats ready for any platform</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏀</div>
+                    <h3>Sports Mixtapes</h3>
+                    <p>Create epic highlight reels from multiple sports videos with AI</p>
                 </div>
             </div>
         </div>
@@ -773,7 +780,17 @@
 
         // Download simulation
         function downloadVideo() {
-            alert('🎬 Your AI-edited video is ready! In a real app, this would download your processed video.');
+            // Create a test download link for demonstration
+            const link = document.createElement('a');
+            link.href = 'data:text/plain;charset=utf-8,This is a demo download. In the full app, this would be your AI-edited video file.';
+            link.download = 'demo-ai-video.txt';
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('🎬 Demo download started! In the full app, this would download your actual AI-edited video.');
             location.reload(); // Reset the form
         }
 

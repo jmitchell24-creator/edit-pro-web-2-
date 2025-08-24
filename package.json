@@ -1,0 +1,34 @@
+{
+  "name": "edit-quick-ai",
+  "version": "1.0.0",
+  "description": "AI-Powered Video Editing Dashboard with Guest Usage & Subscription System",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "nodemon start.js",
+    "setup": "node backend/database.js",
+    "test": "node test-deployment.js",
+    "install-deps": "npm install && cd backend && npm install"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "fs-extra": "^11.1.1",
+    "uuid": "^9.0.1",
+    "better-sqlite3": "^9.2.2",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": ["ai", "video", "editing", "ffmpeg", "dashboard", "subscription", "freemium"],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

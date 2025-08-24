@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Quick - Subscription Plans</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            margin-bottom: 2rem;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #4ecdc4;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Plans Grid */
+        .plans-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .plan-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .plan-card.featured {
+            border-color: #4ecdc4;
+            transform: scale(1.05);
+        }
+
+        .plan-card.featured:hover {
+            transform: scale(1.05) translateY(-10px);
+        }
+
+        .plan-name {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-price {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+
+        .plan-price .currency {
+            font-size: 1.5rem;
+            vertical-align: top;
+        }
+
+        .plan-price .period {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .plan-description {
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .plan-features li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .plan-features li:last-child {
+            border-bottom: none;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: #4ecdc4;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .plan-button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+        }
+
+        .plan-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .plan-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Guest Info */
+        .guest-info {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .guest-info h3 {
+            color: #4ecdc4;
+            margin-bottom: 1rem;
+        }
+
+        .usage-meter {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .usage-bar {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            height: 10px;
+            border-radius: 5px;
+            transition: width 0.3s;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+            
+            .plans-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .plan-card.featured {
+                transform: none;
+            }
+            
+            .plan-card.featured:hover {
+                transform: none;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #4ecdc4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Edit Quick</div>
+            <div class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h1>Choose Your Plan</h1>
+            <p>Start with one free video edit, then choose the perfect plan for your needs</p>
+        </div>
+
+        <!-- Guest Usage Info -->
+        <div class="guest-info" id="guestInfo" style="display: none;">
+            <h3>Your Free Trial Status</h3>
+            <div class="usage-meter">
+                <p>Videos used: <span id="usageCount">0</span> / <span id="maxUsage">1</span></p>
+                <div class="usage-bar" id="usageBar" style="width: 0%"></div>
+            </div>
+            <p id="guestMessage">You have one free video edit remaining!</p>
+        </div>
+
+        <!-- Plans Loading -->
+        <div class="loading" id="plansLoading">
+            <div class="spinner"></div>
+            <p>Loading subscription plans...</p>
+        </div>
+
+        <!-- Plans Grid -->
+        <div class="plans-grid" id="plansGrid" style="display: none;">
+            <!-- Plans will be populated here -->
+        </div>
+
+        <!-- Login/Register CTA -->
+        <div class="guest-info" id="loginCTA" style="display: none;">
+            <h3>Ready to Continue?</h3>
+            <p>Create an account to access your subscription and continue editing videos</p>
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                <a href="/login" class="plan-button" style="text-decoration: none; display: inline-block;">Login</a>
+                <a href="/register" class="plan-button" style="text-decoration: none; display: inline-block;">Register</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if user is logged in
+        const token = localStorage.getItem('authToken');
+        const isLoggedIn = !!token;
+
+        // Load subscription plans
+        async function loadSubscriptionPlans() {
+            try {
+                const response = await fetch('/api/subscriptions/plans');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayPlans(data.plans);
+                } else {
+                    throw new Error(data.error || 'Failed to load plans');
+                }
+            } catch (error) {
+                console.error('Error loading plans:', error);
+                document.getElementById('plansLoading').innerHTML = '<p>Error loading plans. Please try again later.</p>';
+            }
+        }
+
+        // Display subscription plans
+        function displayPlans(plans) {
+            const plansGrid = document.getElementById('plansGrid');
+            const plansLoading = document.getElementById('plansLoading');
+            
+            plansGrid.innerHTML = '';
+            
+            plans.forEach((plan, index) => {
+                const isFeatured = index === 1; // Pro plan is featured
+                const planCard = document.createElement('div');
+                planCard.className = `plan-card ${isFeatured ? 'featured' : ''}`;
+                
+                planCard.innerHTML = `
+                    <div class="plan-name">${plan.name}</div>
+                    <div class="plan-price">
+                        <span class="currency">$</span>${plan.price}
+                        <span class="period">/month</span>
+                    </div>
+                    <div class="plan-description">${plan.description}</div>
+                    <ul class="plan-features">
+                        ${JSON.parse(plan.features).map(feature => `<li>${feature}</li>`).join('')}
+                        <li>Up to ${plan.videoLimit} videos per month</li>
+                    </ul>
+                    <button class="plan-button" onclick="selectPlan('${plan.id}')" ${!isLoggedIn ? 'disabled' : ''}>
+                        ${!isLoggedIn ? 'Login Required' : 'Choose Plan'}
+                    </button>
+                `;
+                
+                plansGrid.appendChild(planCard);
+            });
+            
+            plansLoading.style.display = 'none';
+            plansGrid.style.display = 'grid';
+        }
+
+        // Select subscription plan
+        async function selectPlan(planId) {
+            if (!isLoggedIn) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/subscriptions/create', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ planId })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Successfully subscribed to ${data.subscription.planName}!`);
+                    window.location.href = '/dashboard';
+                } else {
+                    alert(data.error || 'Failed to create subscription');
+                }
+            } catch (error) {
+                console.error('Error creating subscription:', error);
+                alert('Failed to create subscription. Please try again.');
+            }
+        }
+
+        // Load guest usage info
+        async function loadGuestUsage() {
+            try {
+                const response = await fetch('/api/guest/usage');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayGuestUsage(data);
+                }
+            } catch (error) {
+                console.error('Error loading guest usage:', error);
+            }
+        }
+
+        // Display guest usage info
+        function displayGuestUsage(usage) {
+            const guestInfo = document.getElementById('guestInfo');
+            const loginCTA = document.getElementById('loginCTA');
+            
+            if (usage.blocked || usage.remaining === 0) {
+                guestInfo.style.display = 'none';
+                loginCTA.style.display = 'block';
+                return;
+            }
+            
+            document.getElementById('usageCount').textContent = usage.usageCount;
+            document.getElementById('maxUsage').textContent = 1;
+            document.getElementById('usageBar').style.width = `${(usage.usageCount / 1) * 100}%`;
+            
+            if (usage.isFirstTime) {
+                document.getElementById('guestMessage').textContent = 'Welcome! You have one free video edit available.';
+            } else {
+                document.getElementById('guestMessage').textContent = `You have ${usage.remaining} free video edit(s) remaining.`;
+            }
+            
+            guestInfo.style.display = 'block';
+        }
+
+        // Initialize page
+        async function init() {
+            if (!isLoggedIn) {
+                await loadGuestUsage();
+            }
+            await loadSubscriptionPlans();
+        }
+
+        // Start initialization when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
