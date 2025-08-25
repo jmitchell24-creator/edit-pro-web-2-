@@ -780,17 +780,18 @@
 
         // Download simulation
         function downloadVideo() {
-            // Get the project ID from the current session or create a test one
-            const projectId = 'demo-project-123'; // This should come from your actual project data
-            
             // Show loading state
             const downloadBtn = document.querySelector('.btn-primary');
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = '⏳ Downloading...';
             downloadBtn.disabled = true;
             
-            // Call the actual download API
-            fetch(`/api/projects/${projectId}/download`)
+            // First, create a demo project if it doesn't exist
+            createDemoProject()
+                .then(projectId => {
+                    // Now try to download from the real project
+                    return fetch(`/api/projects/${projectId}/download`);
+                })
                 .then(response => {
                     if (response.ok) {
                         // Create blob and download
@@ -826,6 +827,46 @@
                     downloadBtn.innerHTML = originalText;
                     downloadBtn.disabled = false;
                 });
+        }
+
+        // Create a demo project for testing
+        async function createDemoProject() {
+            try {
+                // Check if we already have a demo project
+                let demoProjectId = localStorage.getItem('demoProjectId');
+                
+                if (!demoProjectId) {
+                    // Create a new demo project
+                    const response = await fetch('/api/projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: 'Demo AI Video',
+                            style: 'cinematic',
+                            intensity: 'medium',
+                            quality: 'high',
+                            customEffects: [],
+                            platformOptimize: 'auto',
+                            aiIntelligence: 'smart'
+                        })
+                    });
+
+                    if (response.ok) {
+                        const project = await response.json();
+                        demoProjectId = project.id;
+                        localStorage.setItem('demoProjectId', demoProjectId);
+                    } else {
+                        throw new Error('Failed to create demo project');
+                    }
+                }
+                
+                return demoProjectId;
+            } catch (error) {
+                console.error('Error creating demo project:', error);
+                throw error;
+            }
         }
 
         // Smooth scrolling for navigation

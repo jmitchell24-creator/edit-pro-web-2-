@@ -306,6 +306,100 @@ app.post('/api/upload', checkGuestUsage, upload.single('video'), async (req, res
     }
 });
 
+// Create a new project (for demo/testing)
+app.post('/api/projects', (req, res) => {
+    try {
+        const { 
+            name, 
+            style, 
+            intensity, 
+            quality, 
+            customEffects, 
+            platformOptimize, 
+            aiIntelligence 
+        } = req.body;
+        
+        // Create new project
+        const projectId = uuidv4();
+        const project = {
+            id: projectId,
+            name: name || `Demo Project ${Date.now()}`,
+            style: style || 'cinematic',
+            intensity: intensity || 'medium',
+            quality: quality || '1080p',
+            customEffects: customEffects || [],
+            platformOptimize: platformOptimize || 'auto',
+            aiIntelligence: aiIntelligence || 'smart',
+            status: 'completed', // Set as completed for demo
+            createdAt: new Date().toISOString(),
+            progress: 100,
+            currentStep: 'Demo video ready',
+            processedVideo: 'demo-video.mp4', // Demo video file
+            thumbnail: 'demo-thumbnail.jpg'
+        };
+
+        // Store project in database
+        try {
+            const userId = req.user ? req.user.id : `guest_${req.ip.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            
+            projectOperations.createProject.run(
+                projectId,
+                project.name,
+                project.status,
+                project.style,
+                project.intensity,
+                project.quality,
+                JSON.stringify(project.customEffects),
+                project.platformOptimize,
+                project.aiIntelligence,
+                project.createdAt,
+                0, // fileSize
+                '', // originalVideo
+                userId
+            );
+            
+            // Update project with processed video info
+            projectOperations.updateProject.run(
+                project.name,
+                project.style,
+                project.intensity,
+                project.quality,
+                JSON.stringify(project.customEffects),
+                project.platformOptimize,
+                project.aiIntelligence,
+                project.thumbnail,
+                project.processedVideo,
+                projectId
+            );
+            
+            // Add to processing history
+            historyOperations.addStep.run(
+                uuidv4(),
+                projectId,
+                'demo_creation',
+                'success',
+                'Demo project created successfully',
+                new Date().toISOString()
+            );
+            
+            console.log('Demo project created:', project);
+        } catch (dbError) {
+            console.error('Database error:', dbError);
+            return res.status(500).json({ error: 'Failed to save project to database' });
+        }
+
+        res.json({ 
+            success: true, 
+            project: project,
+            message: 'Demo project created successfully!'
+        });
+        
+    } catch (error) {
+        console.error('Project creation error:', error);
+        res.status(500).json({ error: 'Failed to create project' });
+    }
+});
+
 // Start AI processing for a project
 app.post('/api/projects/:id/process', (req, res) => {
     try {
@@ -381,6 +475,19 @@ app.get('/api/projects/:id/download', async (req, res) => {
         if (storageMode === 'cloud' && project.processedVideoKey) {
             await downloadVideo(project.processedVideoKey, res);
         } else {
+            // Check if this is a demo project
+            if (project.processedVideo === 'demo-video.mp4') {
+                // Create a demo video response
+                res.setHeader('Content-Type', 'video/mp4');
+                res.setHeader('Content-Disposition', `attachment; filename="${project.name}-AI-Edited.mp4"`);
+                
+                // Send a simple demo video (you can replace this with a real video file)
+                const demoVideoData = Buffer.from('demo video content - replace with real video file');
+                res.setHeader('Content-Length', demoVideoData.length);
+                res.send(demoVideoData);
+                return;
+            }
+            
             // Fallback to local storage
             const videoPath = path.join(projectsDir, project.processedVideo);
             if (!fs.existsSync(videoPath)) {
