@@ -858,7 +858,8 @@ app.post('/api/subscriptions/create', authenticateToken, async (req, res) => {
 });
 
 // Guest usage info endpoint
-app.get('/api/guest/usage', async (req, res) => {
+// Keep compatibility alias for /api/usage as some frontends use it
+app.get(['/api/guest/usage', '/api/usage'], async (req, res) => {
     try {
         const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
         const guestUsage = guestUsageOperations.getGuestUsageByIP.get(clientIP);

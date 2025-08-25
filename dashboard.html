@@ -1089,10 +1089,13 @@
     </section>
 
     <script>
-        // Use local API when developing, otherwise same-origin API in production
-        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-            ? 'http://localhost:8080/api'
-            : `${location.origin}/api`;
+        // Resolve API base URL with overrides
+        const isLocalHost = (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+        const metaApi = document.querySelector('meta[name="api-base"]');
+        const configuredApiBase = (window.API_BASE && typeof window.API_BASE === 'string' && window.API_BASE.trim())
+            || (metaApi && metaApi.content);
+        const API_BASE = configuredApiBase
+            || (isLocalHost ? 'http://localhost:8080/api' : `${location.origin}/api`);
         let projects = [];
 
         // Initialize dashboard
