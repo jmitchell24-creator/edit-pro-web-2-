@@ -33,7 +33,7 @@ const allowedOrigins = [
 ];
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin) {
+        if (!origin || origin === 'null') {
             // Allow requests with no origin (e.g., file:// or curl)
             return callback(null, true);
         }

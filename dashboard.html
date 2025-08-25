@@ -1241,7 +1241,7 @@
             let actions = [];
             
             if (project.status === 'uploaded') {
-                actions.push(`<button class="btn btn-primary" onclick="startProcessing('${project.id}')">🚀 Start AI Processing</button>`);
+                actions.push(`<button class="btn btn-primary" onclick="startProcessing('${project.id}'); return false;">🚀 Start AI Processing</button>`);
             }
             
             if (project.status === 'processing') {
@@ -1864,6 +1864,14 @@
 
         // Start AI processing for a project
         async function startProcessing(projectId) {
+            // Disable all related buttons to prevent double clicks
+            try {
+                document.querySelectorAll(`.btn.btn-primary[onclick*="startProcessing('${projectId}')"]`).forEach(btn => {
+                    btn.disabled = true;
+                    btn.textContent = '⏳ Starting...';
+                });
+            } catch (_) {}
+
             try {
                 // Find the project
                 const project = projects.find(p => p.id === projectId);
@@ -1906,6 +1914,13 @@
             } catch (error) {
                 console.error('Processing error:', error);
                 alert(`❌ Failed to start processing: ${error.message}`);
+            } finally {
+                try {
+                    document.querySelectorAll(`.btn.btn-primary[onclick*="startProcessing('${projectId}')"]`).forEach(btn => {
+                        btn.disabled = false;
+                        btn.textContent = '🚀 Start AI Processing';
+                    });
+                } catch (_) {}
             }
         }
 
