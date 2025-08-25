@@ -2133,6 +2133,14 @@
 
         // Download processed video
         async function downloadVideo(projectId) {
+            // Disable related buttons while downloading
+            try {
+                document.querySelectorAll(`.btn.btn-primary[onclick*=\"downloadVideo('${projectId}')\"]`).forEach(btn => {
+                    btn.disabled = true;
+                    btn.textContent = '⏳ Downloading...';
+                });
+            } catch (_) {}
+
             try {
                 const project = projects.find(p => p.id === projectId);
                 if (!project) {
@@ -2144,27 +2152,44 @@
                     return;
                 }
 
-                // Create download link for the processed video
                 const downloadUrl = `${API_BASE}/projects/${projectId}/download`;
-                
-                // Create temporary link element
+                const response = await fetch(downloadUrl, {
+                    method: 'GET',
+                    headers: { 'Accept': 'video/mp4' }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => '');
+                    throw new Error(`${response.status} ${errorText || 'Download failed'}`);
+                }
+
+                const blob = await response.blob();
+                if (!blob || blob.size === 0) {
+                    throw new Error('Empty file received');
+                }
+
+                const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
-                link.href = downloadUrl;
+                link.href = url;
                 link.download = `AI-Edited-${project.name || 'Video'}.mp4`;
                 link.style.display = 'none';
-                
-                // Add to page and click
                 document.body.appendChild(link);
                 link.click();
-                
-                // Clean up
                 document.body.removeChild(link);
-                
+                window.URL.revokeObjectURL(url);
+
                 alert('🎬 Download started! Your AI-edited video is being downloaded.');
-                
+
             } catch (error) {
                 console.error('Download error:', error);
                 alert(`❌ Download failed: ${error.message}`);
+            } finally {
+                try {
+                    document.querySelectorAll(`.btn.btn-primary[onclick*=\"downloadVideo('${projectId}')\"]`).forEach(btn => {
+                        btn.disabled = false;
+                        btn.textContent = '📥 Download';
+                    });
+                } catch (_) {}
             }
         }
 
