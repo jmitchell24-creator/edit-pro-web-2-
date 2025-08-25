@@ -780,6 +780,8 @@
 
         // Download simulation
         function downloadVideo() {
+            console.log('Download video function called');
+            
             // Show loading state
             const downloadBtn = document.querySelector('.btn-primary');
             const originalText = downloadBtn.innerHTML;
@@ -789,18 +791,25 @@
             // First, create a demo project if it doesn't exist
             createDemoProject()
                 .then(projectId => {
+                    console.log('Demo project created/found, project ID:', projectId);
                     // Now try to download from the real project
                     return fetch(`/api/projects/${projectId}/download`);
                 })
                 .then(response => {
+                    console.log('Download response status:', response.status);
+                    console.log('Download response ok:', response.ok);
+                    
                     if (response.ok) {
                         // Create blob and download
                         return response.blob();
                     } else {
-                        throw new Error('Download failed');
+                        const errorText = response.text();
+                        console.error('Download response error:', errorText);
+                        throw new Error(`Download failed: ${response.status}`);
                     }
                 })
                 .then(blob => {
+                    console.log('Blob received, size:', blob.size);
                     // Create download link
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -821,7 +830,7 @@
                 })
                 .catch(error => {
                     console.error('Download error:', error);
-                    alert('❌ Download failed. Please try again or check if the video is ready.');
+                    alert(`❌ Download failed: ${error.message}`);
                     
                     // Reset button
                     downloadBtn.innerHTML = originalText;
@@ -832,10 +841,15 @@
         // Create a demo project for testing
         async function createDemoProject() {
             try {
+                console.log('Starting demo project creation...');
+                
                 // Check if we already have a demo project
                 let demoProjectId = localStorage.getItem('demoProjectId');
+                console.log('Existing demo project ID:', demoProjectId);
                 
                 if (!demoProjectId) {
+                    console.log('Creating new demo project...');
+                    
                     // Create a new demo project
                     const response = await fetch('/api/projects', {
                         method: 'POST',
@@ -853,18 +867,27 @@
                         })
                     });
 
+                    console.log('Response status:', response.status);
+                    console.log('Response ok:', response.ok);
+
                     if (response.ok) {
                         const project = await response.json();
+                        console.log('Project created:', project);
                         demoProjectId = project.id;
                         localStorage.setItem('demoProjectId', demoProjectId);
+                        console.log('Demo project ID saved:', demoProjectId);
                     } else {
-                        throw new Error('Failed to create demo project');
+                        const errorText = await response.text();
+                        console.error('Response error:', errorText);
+                        throw new Error(`Failed to create demo project: ${response.status} - ${errorText}`);
                     }
                 }
                 
+                console.log('Returning demo project ID:', demoProjectId);
                 return demoProjectId;
             } catch (error) {
                 console.error('Error creating demo project:', error);
+                alert(`❌ Demo project creation failed: ${error.message}`);
                 throw error;
             }
         }
