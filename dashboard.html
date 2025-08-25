@@ -1785,7 +1785,17 @@
 
                 if (response.ok) {
                     const result = await response.json();
-                    alert('🎉 Video uploaded successfully! AI processing has started.');
+                    if (result.projectId) {
+                        try {
+                            await startProcessing(result.projectId);
+                            alert('🎉 Video uploaded! AI processing started.');
+                        } catch (e) {
+                            console.error('Failed to start processing automatically:', e);
+                            alert('✅ Upload successful. Click "Start AI Processing" on the project to begin.');
+                        }
+                    } else {
+                        alert('✅ Upload successful. Click "Start AI Processing" on the project to begin.');
+                    }
                 } else {
                     const errorData = await response.json();
                     
