@@ -1,0 +1,20 @@
+[build]
+builder = "nixpacks"
+buildCommand = "npm install"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+
+[[services]]
+name = "edit-quick-website"
+port = 8080
+watchPatterns = [
+    "*.js",
+    "*.html", 
+    "*.css",
+    "package.json",
+    "backend/",
+    "config/"
+]

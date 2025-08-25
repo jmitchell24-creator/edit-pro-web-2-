@@ -209,6 +209,11 @@ function initializePreparedStatements() {
             SELECT * FROM projects ORDER BY createdAt DESC
         `),
 
+        // Get all projects by user
+        getAllProjectsByUser: db.prepare(`
+            SELECT * FROM projects WHERE userId = ? ORDER BY createdAt DESC
+        `),
+
         // Get project by ID
         getProjectById: db.prepare(`
             SELECT * FROM projects WHERE id = ?

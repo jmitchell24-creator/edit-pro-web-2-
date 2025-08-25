@@ -139,9 +139,7 @@ app.get('/api/projects', optionalAuth, (req, res) => {
         let sharedProjects = [];
         
         if (req.user) {
-            userProjects = db.prepare(`
-                SELECT * FROM projects WHERE userId = ? ORDER BY createdAt DESC
-            `).all(req.user.id);
+            userProjects = projectOperations.getAllProjectsByUser.all(req.user.id);
             
             // Get shared projects
             sharedProjects = sharing.getSharedWithUser(req.user.id);
@@ -150,9 +148,7 @@ app.get('/api/projects', optionalAuth, (req, res) => {
             const clientIP = req.ip || req.connection.remoteAddress || req.headers['x-forwarded-for'] || 'unknown';
             const guestUserId = `guest_${clientIP.replace(/[^a-zA-Z0-9]/g, '_')}`;
             
-            userProjects = db.prepare(`
-                SELECT * FROM projects WHERE userId = ? ORDER BY createdAt DESC
-            `).all(guestUserId);
+            userProjects = projectOperations.getAllProjectsByUser.all(guestUserId);
         }
         
         // Combine and format projects
