@@ -21,7 +21,9 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "dotenv": "^16.3.1",
-    "express-rate-limit": "^7.1.5"
+    "express-rate-limit": "^7.1.5",
+    "aws-sdk": "^2.1531.0",
+    "multer-s3": "^3.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

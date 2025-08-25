@@ -67,8 +67,13 @@ const storage = multer.diskStorage({
     }
 });
 
+// Import cloud storage
+const { s3Storage, downloadVideo, streamVideo } = require('./cloud-storage');
+
+// Choose storage based on environment
+const storageMode = process.env.STORAGE_MODE || 'local';
 const upload = multer({
-    storage: storage,
+    storage: storageMode === 'cloud' ? s3Storage : storage,
     limits: {
         fileSize: 500 * 1024 * 1024, // 500MB limit
     },
@@ -361,31 +366,36 @@ app.get('/api/projects/:id/progress', (req, res) => {
 });
 
 // Download processed video
-app.get('/api/projects/:id/download', (req, res) => {
+app.get('/api/projects/:id/download', async (req, res) => {
     try {
         const project = projectOperations.getProjectById.get(req.params.id);
         if (!project) {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-    if (project.status !== 'completed') {
-        return res.status(400).json({ error: 'Video processing not complete' });
-    }
+        if (project.status !== 'completed') {
+            return res.status(400).json({ error: 'Video processing not complete' });
+        }
 
-    // Check if processed video exists
-    const videoPath = path.join(projectsDir, project.processedVideo);
-    if (!fs.existsSync(videoPath)) {
-        return res.status(404).json({ error: 'Processed video file not found' });
-    }
+        // Use cloud storage if enabled
+        if (storageMode === 'cloud' && project.processedVideoKey) {
+            await downloadVideo(project.processedVideoKey, res);
+        } else {
+            // Fallback to local storage
+            const videoPath = path.join(projectsDir, project.processedVideo);
+            if (!fs.existsSync(videoPath)) {
+                return res.status(404).json({ error: 'Processed video file not found' });
+            }
 
-    // Set headers for file download
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Content-Disposition', `attachment; filename="${project.name}-AI-Edited.mp4"`);
-    res.setHeader('Content-Length', fs.statSync(videoPath).size);
+            // Set headers for file download
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Content-Disposition', `attachment; filename="${project.name}-AI-Edited.mp4"`);
+            res.setHeader('Content-Length', fs.statSync(videoPath).size);
 
-    // Stream the video file
-    const videoStream = fs.createReadStream(videoPath);
-    videoStream.pipe(res);
+            // Stream the video file
+            const videoStream = fs.createReadStream(videoPath);
+            videoStream.pipe(res);
+        }
     } catch (error) {
         console.error('Error downloading video:', error);
         res.status(500).json({ error: 'Failed to download video' });
@@ -393,28 +403,34 @@ app.get('/api/projects/:id/download', (req, res) => {
 });
 
 // Serve video files directly
-app.get('/api/projects/:id/video', (req, res) => {
+app.get('/api/projects/:id/video', async (req, res) => {
     try {
         const project = projectOperations.getProjectById.get(req.params.id);
         if (!project) {
             return res.status(404).json({ error: 'Project not found' });
         }
 
-    if (project.status !== 'completed') {
-        return res.status(400).json({ error: 'Video processing not complete' });
-    }
+        if (project.status !== 'completed') {
+            return res.status(400).json({ error: 'Video processing not complete' });
+        }
 
-    const videoPath = path.join(projectsDir, project.processedVideo);
-    if (!fs.existsSync(videoPath)) {
-        return res.status(404).json({ error: 'Video file not found' });
-    }
+        // Use cloud storage if enabled
+        if (storageMode === 'cloud' && project.processedVideoKey) {
+            await streamVideo(project.processedVideoKey, res);
+        } else {
+            // Fallback to local storage
+            const videoPath = path.join(projectsDir, project.processedVideo);
+            if (!fs.existsSync(videoPath)) {
+                return res.status(404).json({ error: 'Video file not found' });
+            }
 
-    // Stream video for preview/download
-    res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Accept-Ranges', 'bytes');
-    
-    const videoStream = fs.createReadStream(videoPath);
-    videoStream.pipe(res);
+            // Stream video for preview/download
+            res.setHeader('Content-Type', 'video/mp4');
+            res.setHeader('Accept-Ranges', 'bytes');
+            
+            const videoStream = fs.createReadStream(videoPath);
+            videoStream.pipe(res);
+        }
     } catch (error) {
         console.error('Error serving video:', error);
         res.status(500).json({ error: 'Failed to serve video' });
