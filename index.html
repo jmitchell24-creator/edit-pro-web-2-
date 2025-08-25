@@ -773,17 +773,17 @@
                     <div style="color: #4ecdc4; font-size: 3rem;">🎉</div>
                     <h3>Processing Complete!</h3>
                     <p>Your video is ready for download</p>
-                    <button class="btn btn-primary" onclick="downloadVideo()">📥 Download Video</button>
+                    <button class="btn btn-primary" onclick="downloadVideo(this)">📥 Download Video</button>
                 `;
             }, 3000);
         }
 
         // Download simulation
-        async function downloadVideo() {
+        async function downloadVideo(buttonEl) {
             console.log('🚀 Download video function called');
             
             // Show loading state
-            const downloadBtn = document.querySelector('.btn-primary');
+            const downloadBtn = buttonEl || document.querySelector('#loading .btn.btn-primary') || document.querySelector('.btn-primary');
             const originalText = downloadBtn.innerHTML;
             downloadBtn.innerHTML = '⏳ Downloading...';
             downloadBtn.disabled = true;
@@ -868,6 +868,23 @@
                 let demoProjectId = localStorage.getItem('demoProjectId');
                 console.log('Existing demo project ID:', demoProjectId);
                 
+                // Validate existing demo project ID with server
+                if (demoProjectId) {
+                    try {
+                        const checkResp = await fetch(`/api/projects/${demoProjectId}`);
+                        if (!checkResp.ok) {
+                            console.warn('Cached demo project not found on server. Recreating...');
+                            localStorage.removeItem('demoProjectId');
+                            demoProjectId = null;
+                        }
+                    } catch (e) {
+                        console.warn('Failed to validate existing demo project:', e);
+                        // proceed to create a new one
+                        localStorage.removeItem('demoProjectId');
+                        demoProjectId = null;
+                    }
+                }
+
                 if (!demoProjectId) {
                     console.log('Creating new demo project...');
                     
@@ -892,9 +909,13 @@
                     console.log('Response ok:', response.ok);
 
                     if (response.ok) {
-                        const project = await response.json();
-                        console.log('Project created:', project);
-                        demoProjectId = project.id;
+                        const data = await response.json();
+                        const created = data.project || data;
+                        console.log('Project created:', created);
+                        demoProjectId = created.id;
+                        if (!demoProjectId) {
+                            throw new Error('Server did not return a project id');
+                        }
                         localStorage.setItem('demoProjectId', demoProjectId);
                         console.log('Demo project ID saved:', demoProjectId);
                     } else {
