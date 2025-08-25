@@ -1089,7 +1089,10 @@
     </section>
 
     <script>
-        const API_BASE = 'http://localhost:8080/api';
+        // Use local API when developing, otherwise same-origin API in production
+        const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+            ? 'http://localhost:8080/api'
+            : `${location.origin}/api`;
         let projects = [];
 
         // Initialize dashboard

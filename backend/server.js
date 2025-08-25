@@ -23,6 +23,7 @@ app.use(helmet({
 }));
 
 // Configure CORS properly for frontend (allow null origin for file:// during dev)
+const envAllowed = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
 const allowedOrigins = [
     'http://localhost:8080',
     'http://127.0.0.1:8080',
@@ -30,6 +31,8 @@ const allowedOrigins = [
     'http://127.0.0.1:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
+    'https://edit-pro-web-2.onrender.com',
+    ...envAllowed,
 ];
 app.use(cors({
     origin: (origin, callback) => {
