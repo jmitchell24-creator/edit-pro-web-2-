@@ -131,9 +131,63 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
     res.json({ success: true, user: req.user });
 });
 
-// Health check
+// Database health check endpoint
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date().toISOString() });
+    try {
+        // Check if database is accessible
+        const projects = projectOperations.getAllProjects.all();
+        const projectCount = projects.length;
+        
+        // Check if projects directory exists
+        const projectsDirExists = fs.existsSync(projectsDir);
+        const projectsDirPath = projectsDir;
+        
+        // Check if uploads directory exists
+        const uploadsDirExists = fs.existsSync(uploadsDir);
+        const uploadsDirPath = uploadsDir;
+        
+        // Get some sample project data
+        const sampleProjects = projects.slice(0, 3).map(p => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            processedVideo: p.processedVideo,
+            createdAt: p.createdAt
+        }));
+        
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            database: {
+                accessible: true,
+                projectCount: projectCount,
+                sampleProjects: sampleProjects
+            },
+            directories: {
+                projects: {
+                    exists: projectsDirExists,
+                    path: projectsDirPath
+                },
+                uploads: {
+                    exists: uploadsDirExists,
+                    path: uploadsDirPath
+                }
+            },
+            storage: {
+                mode: storageMode,
+                cloudEnabled: storageMode === 'cloud'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Health check error:', error);
+        res.status(500).json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
 });
 
 // Get all projects (user's own projects + shared projects)
@@ -214,15 +268,15 @@ app.get('/api/projects/:id', (req, res) => {
 });
 
 // Upload video and create project
-app.post('/api/upload', checkGuestUsage, upload.single('video'), async (req, res) => {
+app.post('/api/upload', checkGuestUsage, upload.array('videos'), async (req, res) => {
     try {
         console.log('Upload request received:', {
             body: req.body,
-            file: req.file ? req.file.filename : 'No file'
+            files: req.files ? req.files.map(f => f.filename) : []
         });
 
-        if (!req.file) {
-            return res.status(400).json({ error: 'No video file uploaded' });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: 'No video files uploaded' });
         }
 
         const { 
@@ -240,7 +294,7 @@ app.post('/api/upload', checkGuestUsage, upload.single('video'), async (req, res
         const project = {
             id: projectId,
             name: projectName || `Project ${Date.now()}`,
-            originalVideo: req.file.filename,
+            originalVideo: req.files[0].filename,
             style: style || 'cinematic',
             intensity: intensity || 'medium',
             quality: quality || '1080p',
@@ -249,7 +303,7 @@ app.post('/api/upload', checkGuestUsage, upload.single('video'), async (req, res
             aiIntelligence: aiIntelligence || 'smart',
             status: 'uploaded',
             createdAt: new Date().toISOString(),
-            fileSize: req.file.size,
+            fileSize: req.files.reduce((sum, f) => sum + (f.size || 0), 0),
             progress: 0,
             currentStep: 'Uploaded successfully'
         };
@@ -368,11 +422,11 @@ app.post('/api/projects', (req, res) => {
                 project.style,
                 project.intensity,
                 project.quality,
-                JSON.stringify(project.customEffects),
-                project.platformOptimize,
-                project.aiIntelligence,
-                project.thumbnail,
-                project.processedVideo,
+                JSON.stringify(project.customEffects || []),
+                project.platformOptimize || 'auto',
+                project.aiIntelligence || 'smart',
+                `demo-thumbnail.jpg`,
+                `demo-video.mp4`, // Use consistent demo filename
                 projectId
             );
             
@@ -466,36 +520,60 @@ app.get('/api/projects/:id/progress', (req, res) => {
 // Download processed video
 app.get('/api/projects/:id/download', async (req, res) => {
     try {
-        const project = projectOperations.getProjectById.get(req.params.id);
+        const projectId = req.params.id;
+        console.log(`📥 Download request for project: ${projectId}`);
+        
+        const project = projectOperations.getProjectById.get(projectId);
         if (!project) {
+            console.log(`❌ Project not found: ${projectId}`);
             return res.status(404).json({ error: 'Project not found' });
         }
 
+        console.log(`📊 Project status: ${project.status}, processedVideo: ${project.processedVideo}`);
+
         if (project.status !== 'completed') {
+            console.log(`❌ Project not completed: ${project.status}`);
             return res.status(400).json({ error: 'Video processing not complete' });
         }
 
         // Use cloud storage if enabled
         if (storageMode === 'cloud' && project.processedVideoKey) {
+            console.log(`☁️ Using cloud storage for download`);
             await downloadVideo(project.processedVideoKey, res);
         } else {
             // Check if this is a demo project
-            if (project.processedVideo === 'demo-video.mp4') {
-                // Create a demo video response
+            if (project.processedVideo && project.processedVideo.includes('demo')) {
+                console.log(`🎬 Demo project detected: ${project.processedVideo}`);
+                
+                // For demo projects, create a simple video response
                 res.setHeader('Content-Type', 'video/mp4');
                 res.setHeader('Content-Disposition', `attachment; filename="${project.name}-AI-Edited.mp4"`);
                 
-                // Send a simple demo video (you can replace this with a real video file)
-                const demoVideoData = Buffer.from('demo video content - replace with real video file');
+                // Create a minimal demo video content
+                const demoVideoData = Buffer.from([
+                    0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D,
+                    0x00, 0x00, 0x02, 0x00, 0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32,
+                    0x61, 0x76, 0x63, 0x31, 0x6D, 0x70, 0x34, 0x31, 0x00, 0x00, 0x00, 0x08,
+                    0x66, 0x72, 0x65, 0x65, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+                ]);
+                
                 res.setHeader('Content-Length', demoVideoData.length);
                 res.send(demoVideoData);
+                console.log(`✅ Demo video sent successfully`);
                 return;
             }
             
             // Fallback to local storage
             const videoPath = path.join(projectsDir, project.processedVideo);
+            console.log(`📁 Looking for video at: ${videoPath}`);
+            
             if (!fs.existsSync(videoPath)) {
-                return res.status(404).json({ error: 'Processed video file not found' });
+                console.log(`❌ Video file not found: ${videoPath}`);
+                return res.status(404).json({ 
+                    error: 'Processed video file not found',
+                    details: `File: ${project.processedVideo}`,
+                    path: videoPath
+                });
             }
 
             // Set headers for file download
@@ -506,10 +584,14 @@ app.get('/api/projects/:id/download', async (req, res) => {
             // Stream the video file
             const videoStream = fs.createReadStream(videoPath);
             videoStream.pipe(res);
+            console.log(`✅ Video file streamed successfully`);
         }
     } catch (error) {
-        console.error('Error downloading video:', error);
-        res.status(500).json({ error: 'Failed to download video' });
+        console.error('❌ Error downloading video:', error);
+        res.status(500).json({ 
+            error: 'Failed to download video',
+            details: error.message
+        });
     }
 });
 
@@ -939,6 +1021,57 @@ async function processVideoWithAI(projectId) {
     }
 }
 
+// Create demo video file
+function createDemoVideo(projectId) {
+    try {
+        // Create a simple demo video file
+        const demoVideoPath = path.join(projectsDir, 'demo-video.mp4');
+        
+        // Check if demo video already exists
+        if (!fs.existsSync(demoVideoPath)) {
+            // Create a minimal MP4 file (this is a very basic MP4 header)
+            const mp4Header = Buffer.from([
+                0x00, 0x00, 0x00, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6F, 0x6D,
+                0x00, 0x00, 0x02, 0x00, 0x69, 0x73, 0x6F, 0x6D, 0x69, 0x73, 0x6F, 0x32,
+                0x61, 0x76, 0x63, 0x31, 0x6D, 0x70, 0x34, 0x31
+            ]);
+            
+            fs.writeFileSync(demoVideoPath, mp4Header);
+            console.log('✅ Demo video file created:', demoVideoPath);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to create demo video:', error);
+        return false;
+    }
+}
+
+// Create demo thumbnail file
+function createDemoThumbnail(projectId) {
+    try {
+        // Create a simple demo thumbnail file
+        const demoThumbnailPath = path.join(projectsDir, 'demo-thumbnail.jpg');
+        
+        // Check if demo thumbnail already exists
+        if (!fs.existsSync(demoThumbnailPath)) {
+            // Create a minimal JPEG file (this is a very basic JPEG header)
+            const jpegHeader = Buffer.from([
+                0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
+                0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00
+            ]);
+            
+            fs.writeFileSync(demoThumbnailPath, jpegHeader);
+            console.log('✅ Demo thumbnail file created:', demoThumbnailPath);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to create demo thumbnail:', error);
+        return false;
+    }
+}
+
 // AI Processing Simulation (fallback)
 function simulateAIProcessing(projectId) {
     try {
@@ -982,10 +1115,14 @@ function simulateAIProcessing(projectId) {
                 JSON.stringify(project.customEffects || []),
                 project.platformOptimize || 'auto',
                 project.aiIntelligence || 'smart',
-                `thumbnail-${project.id}.jpg`,
-                `processed-${project.id}.mp4`,
+                `demo-thumbnail.jpg`,
+                `demo-video.mp4`, // Use consistent demo filename
                 projectId
             );
+            
+            // Create demo files
+            createDemoVideo(projectId);
+            createDemoThumbnail(projectId);
             
             // Add completion to history
             historyOperations.addStep.run(
@@ -1039,34 +1176,28 @@ function simulateAIProcessing(projectId) {
     }
 }
 
-// Serve login page
+// Serve landing, auth, and dashboard pages
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'login.html'));
 });
 
-// Serve registration page
 app.get('/register', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'register.html'));
 });
 
-// Serve dashboard (requires authentication)
+// Landing page at root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'dashboard.html'));
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
 });
 
-// Serve dashboard with explicit route
+// Dashboard route
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'dashboard.html'));
 });
 
-// Serve subscription plans page
+// Subscription plans page
 app.get('/plans', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'subscription-plans.html'));
-});
-
-// Serve registration page
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'register.html'));
 });
 
 // Error handling middleware

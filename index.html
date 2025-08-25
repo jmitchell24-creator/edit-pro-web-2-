@@ -406,7 +406,7 @@
             <div class="nav-links">
                 <a href="#features">Features</a>
                 <a href="#upload">Upload</a>
-                <a href="dashboard.html">Dashboard</a>
+                <a href="/dashboard">Dashboard</a>
                 <a href="sports-mixtape.html">🏀 Sports Mixtape</a>
                 <a href="#about">About</a>
             </div>
@@ -425,9 +425,9 @@
         </div>
         
         <!-- Background Elements -->
-        <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+        <div class="absolute inset-0 overflow-hidden">
+            <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
         </div>
     </section>
 
@@ -779,8 +779,8 @@
         }
 
         // Download simulation
-        function downloadVideo() {
-            console.log('Download video function called');
+        async function downloadVideo() {
+            console.log('🚀 Download video function called');
             
             // Show loading state
             const downloadBtn = document.querySelector('.btn-primary');
@@ -788,28 +788,25 @@
             downloadBtn.innerHTML = '⏳ Downloading...';
             downloadBtn.disabled = true;
             
-            // First, create a demo project if it doesn't exist
-            createDemoProject()
-                .then(projectId => {
-                    console.log('Demo project created/found, project ID:', projectId);
-                    // Now try to download from the real project
-                    return fetch(`/api/projects/${projectId}/download`);
-                })
-                .then(response => {
-                    console.log('Download response status:', response.status);
-                    console.log('Download response ok:', response.ok);
+            try {
+                // First, create a demo project if it doesn't exist
+                const projectId = await createDemoProject();
+                console.log('✅ Demo project ready, ID:', projectId);
+                
+                // Now try to download from the real project
+                console.log('📥 Attempting download from:', `/api/projects/${projectId}/download`);
+                const response = await fetch(`/api/projects/${projectId}/download`);
+                
+                console.log('📊 Download response status:', response.status);
+                console.log('📊 Download response ok:', response.ok);
+                console.log('📊 Download response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (response.ok) {
+                    // Create blob and download
+                    const blob = await response.blob();
+                    console.log('✅ Blob received, size:', blob.size, 'bytes');
+                    console.log('✅ Blob type:', blob.type);
                     
-                    if (response.ok) {
-                        // Create blob and download
-                        return response.blob();
-                    } else {
-                        const errorText = response.text();
-                        console.error('Download response error:', errorText);
-                        throw new Error(`Download failed: ${response.status}`);
-                    }
-                })
-                .then(blob => {
-                    console.log('Blob received, size:', blob.size);
                     // Create download link
                     const url = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -827,15 +824,39 @@
                     // Show success message
                     alert('🎉 Video downloaded successfully!');
                     location.reload(); // Reset the form
-                })
-                .catch(error => {
-                    console.error('Download error:', error);
-                    alert(`❌ Download failed: ${error.message}`);
+                } else {
+                    // Get detailed error information
+                    let errorDetails = '';
+                    try {
+                        const errorResponse = await response.text();
+                        console.error('❌ Error response body:', errorResponse);
+                        errorDetails = errorResponse;
+                    } catch (e) {
+                        console.error('❌ Could not read error response:', e);
+                        errorDetails = 'Unknown error';
+                    }
                     
-                    // Reset button
-                    downloadBtn.innerHTML = originalText;
-                    downloadBtn.disabled = false;
-                });
+                    throw new Error(`Download failed: ${response.status} - ${errorDetails}`);
+                }
+            } catch (error) {
+                console.error('❌ Download error:', error);
+                
+                // Show detailed error message
+                let errorMessage = 'Download failed';
+                if (error.message.includes('404')) {
+                    errorMessage = '❌ Download failed: Project or video file not found. This might be a server configuration issue.';
+                } else if (error.message.includes('500')) {
+                    errorMessage = '❌ Download failed: Server error. Check the console for details.';
+                } else {
+                    errorMessage = `❌ Download failed: ${error.message}`;
+                }
+                
+                alert(errorMessage);
+                
+                // Reset button
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            }
         }
 
         // Create a demo project for testing
