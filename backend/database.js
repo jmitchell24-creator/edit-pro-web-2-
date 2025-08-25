@@ -200,8 +200,8 @@ function initializePreparedStatements() {
             INSERT INTO projects (
                 id, name, status, style, intensity, quality, customEffects, 
                 platformOptimize, aiIntelligence, createdAt, fileSize, 
-                originalVideo, userId
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                originalVideo, userId, progress, currentStep
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `),
 
         // Get all projects

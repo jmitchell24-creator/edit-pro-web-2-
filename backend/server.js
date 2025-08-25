@@ -272,7 +272,9 @@ app.post('/api/upload', checkGuestUsage, upload.single('video'), async (req, res
                     project.createdAt,
                     project.fileSize,
                     project.originalVideo,
-                    userId
+                    userId,
+                    project.progress, // progress
+                    project.currentStep // currentStep
                 );
             
             // Add to processing history
@@ -355,7 +357,9 @@ app.post('/api/projects', (req, res) => {
                 project.createdAt,
                 0, // fileSize
                 '', // originalVideo
-                userId
+                userId,
+                project.progress, // progress
+                project.currentStep // currentStep
             );
             
             // Update project with processed video info
