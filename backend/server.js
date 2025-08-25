@@ -488,7 +488,18 @@ app.post('/api/projects/:id/process', (req, res) => {
             new Date().toISOString()
         );
 
-        simulateAIProcessing(req.params.id);
+        const projectId = req.params.id;
+        const useSimulation = process.env.AI_MODE === 'simulate';
+
+        if (useSimulation) {
+            simulateAIProcessing(projectId);
+        } else {
+            // Try real FFmpeg-based processing; fallback to simulation on failure
+            processVideoWithAI(projectId).catch(err => {
+                console.error('Real AI processing failed, falling back to simulation:', err.message);
+                simulateAIProcessing(projectId);
+            });
+        }
 
         res.json({ success: true, message: 'AI processing started', project });
     } catch (error) {
@@ -534,6 +545,20 @@ app.get('/api/projects/:id/download', async (req, res) => {
         if (project.status !== 'completed') {
             console.log(`❌ Project not completed: ${project.status}`);
             return res.status(400).json({ error: 'Video processing not complete' });
+        }
+
+        // Remote URL case (e.g., Shotstack)
+        if (project.processedVideo && /^https?:\/\//i.test(project.processedVideo)) {
+            console.log(`🌐 Remote video URL detected, proxying download`);
+            const response = await fetch(project.processedVideo);
+            if (!response.ok) {
+                return res.status(502).json({ error: 'Failed to fetch remote video' });
+            }
+            res.setHeader('Content-Type', response.headers.get('content-type') || 'video/mp4');
+            res.setHeader('Content-Disposition', `attachment; filename="${project.name}-AI-Edited.mp4"`);
+            const buffer = Buffer.from(await response.arrayBuffer());
+            res.setHeader('Content-Length', buffer.length);
+            return res.send(buffer);
         }
 
         // Use cloud storage if enabled
@@ -605,6 +630,17 @@ app.get('/api/projects/:id/video', async (req, res) => {
 
         if (project.status !== 'completed') {
             return res.status(400).json({ error: 'Video processing not complete' });
+        }
+
+        // Remote URL case (e.g., Shotstack)
+        if (project.processedVideo && /^https?:\/\//i.test(project.processedVideo)) {
+            const upstream = await fetch(project.processedVideo);
+            if (!upstream.ok) {
+                return res.status(502).json({ error: 'Failed to fetch remote video' });
+            }
+            res.setHeader('Content-Type', upstream.headers.get('content-type') || 'video/mp4');
+            res.setHeader('Accept-Ranges', 'bytes');
+            return upstream.body.pipe(res);
         }
 
         // Use cloud storage if enabled
@@ -907,6 +943,12 @@ app.get('/api/analytics/system', authenticateToken, async (req, res) => {
 
 // AI Video Processor instance
 const aiProcessor = new AIVideoProcessor();
+let shotstack;
+try {
+    shotstack = require('./shotstack');
+} catch (e) {
+    console.warn('Shotstack module not available:', e.message);
+}
 
 // Real AI Processing with FFmpeg
 async function processVideoWithAI(projectId) {
@@ -961,32 +1003,63 @@ async function processVideoWithAI(projectId) {
         // Step 4: Real AI Processing (75%)
         await updateProgress(75, 'Processing with AI algorithms...');
         
-        // Use the real AI processor
-        await aiProcessor.processVideo(
-            inputPath,
-            outputPath,
-            project.style,
-            project.intensity,
-            project.quality
-        );
+        // Choose renderer based on mode
+        const mode = process.env.AI_MODE || 'ffmpeg';
+        if (mode === 'shotstack' && shotstack) {
+            await updateProgress(76, 'Uploading to cloud renderer...');
+            // Ensure remote URL for local file (uploads to S3)
+            const inputUrl = await shotstack.ensureRemoteUrlForLocalFile(inputPath, project.originalVideo);
+            await updateProgress(82, 'Submitting cloud render...');
+            const jobId = await shotstack.submitRenderFromUrl(inputUrl, project.style, project.quality);
+            await updateProgress(90, 'Rendering in the cloud...');
+            const result = await shotstack.pollUntilComplete(jobId, { intervalMs: 4000, timeoutMs: 12 * 60 * 1000 });
+            if (!result.success || !result.url) {
+                throw new Error(`Cloud render failed: ${result.status?.status || 'unknown'}`);
+            }
+
+            // Save remote URL on project (processedVideoKey used for cloud mode)
+            projectOperations.updateProject.run(
+                project.name,
+                project.style,
+                project.intensity,
+                project.quality,
+                JSON.stringify(project.customEffects || []),
+                project.platformOptimize || 'auto',
+                project.aiIntelligence || 'smart',
+                project.thumbnail || 'demo-thumbnail.jpg',
+                result.url, // store URL directly for now
+                projectId
+            );
+        } else {
+            // Use local FFmpeg processor
+            await aiProcessor.processVideo(
+                inputPath,
+                outputPath,
+                project.style,
+                project.intensity,
+                project.quality
+            );
+        }
 
         // Step 5: Final optimization (100%)
         await updateProgress(100, 'Finalizing video...');
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // Processing complete - update database
-        projectOperations.updateProject.run(
-            project.name,
-            project.style,
-            project.intensity,
-            project.quality,
-            JSON.stringify(project.customEffects || []),
-            project.platformOptimize || 'auto',
-            project.aiIntelligence || 'smart',
-            `thumbnail-${project.id}.jpg`,
-            `processed-${project.id}.mp4`,
-            projectId
-        );
+        if ((process.env.AI_MODE || 'ffmpeg') !== 'shotstack') {
+            projectOperations.updateProject.run(
+                project.name,
+                project.style,
+                project.intensity,
+                project.quality,
+                JSON.stringify(project.customEffects || []),
+                project.platformOptimize || 'auto',
+                project.aiIntelligence || 'smart',
+                `thumbnail-${project.id}.jpg`,
+                `processed-${project.id}.mp4`,
+                projectId
+            );
+        }
         
         // Update status to completed
         projectOperations.updateProjectStatus.run(
