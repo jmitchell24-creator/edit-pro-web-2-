@@ -780,18 +780,52 @@
 
         // Download simulation
         function downloadVideo() {
-            // Create a test download link for demonstration
-            const link = document.createElement('a');
-            link.href = 'data:text/plain;charset=utf-8,This is a demo download. In the full app, this would be your AI-edited video file.';
-            link.download = 'demo-ai-video.txt';
-            link.style.display = 'none';
+            // Get the project ID from the current session or create a test one
+            const projectId = 'demo-project-123'; // This should come from your actual project data
             
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            // Show loading state
+            const downloadBtn = document.querySelector('.btn-primary');
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '⏳ Downloading...';
+            downloadBtn.disabled = true;
             
-            alert('🎬 Demo download started! In the full app, this would download your actual AI-edited video.');
-            location.reload(); // Reset the form
+            // Call the actual download API
+            fetch(`/api/projects/${projectId}/download`)
+                .then(response => {
+                    if (response.ok) {
+                        // Create blob and download
+                        return response.blob();
+                    } else {
+                        throw new Error('Download failed');
+                    }
+                })
+                .then(blob => {
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `ai-edited-video-${Date.now()}.mp4`;
+                    link.style.display = 'none';
+                    
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Clean up
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Show success message
+                    alert('🎉 Video downloaded successfully!');
+                    location.reload(); // Reset the form
+                })
+                .catch(error => {
+                    console.error('Download error:', error);
+                    alert('❌ Download failed. Please try again or check if the video is ready.');
+                    
+                    // Reset button
+                    downloadBtn.innerHTML = originalText;
+                    downloadBtn.disabled = false;
+                });
         }
 
         // Smooth scrolling for navigation
