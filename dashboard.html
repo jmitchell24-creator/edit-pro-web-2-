@@ -1872,6 +1872,7 @@
                 }
 
                 // Call the real AI processing API
+                console.log('Starting processing for project:', projectId);
                 const response = await fetch(`${API_BASE}/projects/${projectId}/process`, {
                     method: 'POST',
                     headers: {
@@ -1881,6 +1882,7 @@
 
                 if (response.ok) {
                     const result = await response.json();
+                    console.log('Processing started result:', result);
                     
                     // Update project status
                     project.status = 'processing';
@@ -1896,8 +1898,9 @@
                     alert('🚀 Real AI processing started! This will analyze your video and apply intelligent editing.');
                     
                 } else {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to start processing');
+                    const text = await response.text();
+                    console.error('Start processing failed:', response.status, text);
+                    throw new Error(`Failed to start processing (${response.status})`);
                 }
                 
             } catch (error) {
