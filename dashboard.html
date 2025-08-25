@@ -1410,6 +1410,7 @@
                     <h3>Music Selected!</h3>
                     <p>${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</p>
                     <small>Click to change music</small>
+                    <input type="file" id="musicUpload" accept="audio/*" style="display:none" onchange="handleMusicSelect(event)">
                 `;
                 musicUploadGroup.onclick = () => document.getElementById('musicUpload').click();
             }
@@ -1729,12 +1730,18 @@
 
         // Upload video and create project
         async function uploadVideo() {
-            const videoFiles = document.getElementById('videoInput').files;
+            const videoInputEl = document.getElementById('videoInput');
+            if (!videoInputEl) {
+                alert('Upload area not ready. Please click the upload box to select videos first.');
+                return;
+            }
+            const videoFiles = videoInputEl.files || [];
             const projectName = document.getElementById('projectName').value;
             const style = document.getElementById('styleSelect').value;
             const intensity = document.getElementById('intensitySelect').value;
             const quality = document.getElementById('qualitySelect').value;
-            const musicFile = document.getElementById('musicUpload').files[0];
+            const musicInputEl = document.getElementById('musicUpload');
+            const musicFile = musicInputEl && musicInputEl.files && musicInputEl.files[0] ? musicInputEl.files[0] : null;
             const customEffects = Array.from(document.getElementById('customEffects').selectedOptions).map(opt => opt.value);
             const platformOptimize = document.getElementById('platformOptimize').value;
             const aiIntelligence = document.getElementById('aiIntelligence').value;
