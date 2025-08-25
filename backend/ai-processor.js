@@ -4,8 +4,20 @@ const path = require('path');
 
 class AIVideoProcessor {
     constructor() {
-        this.ffmpegPath = 'ffmpeg'; // Make sure FFmpeg is installed and in PATH
-        this.ffprobePath = 'ffprobe';
+        // Prefer bundled static binaries; fallback to system PATH
+        try {
+            // eslint-disable-next-line global-require
+            this.ffmpegPath = require('ffmpeg-static') || 'ffmpeg';
+        } catch (e) {
+            this.ffmpegPath = 'ffmpeg';
+        }
+        try {
+            // eslint-disable-next-line global-require
+            const ffprobeStatic = require('ffprobe-static');
+            this.ffprobePath = (ffprobeStatic && ffprobeStatic.path) || 'ffprobe';
+        } catch (e) {
+            this.ffprobePath = 'ffprobe';
+        }
     }
 
     // Check if FFmpeg is available
