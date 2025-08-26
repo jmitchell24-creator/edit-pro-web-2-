@@ -1,46 +1,33 @@
-const AWS = require('aws-sdk');
-const multerS3 = require('multer-s3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-
-// Configure AWS
-const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    region: process.env.AWS_REGION || 'us-east-1'
-});
+const { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET;
+const AWS_REGION = process.env.AWS_REGION || 'us-east-1';
 
-// Configure multer for S3 uploads
-const s3Storage = multerS3({
-    s3: s3,
-    bucket: BUCKET_NAME,
-    metadata: (req, file, cb) => {
-        cb(null, { fieldName: file.fieldname });
-    },
-    key: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${uuidv4()}-${file.originalname}`;
-        cb(null, `uploads/${uniqueName}`);
-    }
+const s3 = new S3Client({
+    region: AWS_REGION,
+    credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    } : undefined
 });
 
-// Upload video to S3
+// Upload video buffer to S3 (used by Shotstack helper)
 const uploadVideo = async (file) => {
     try {
-        const params = {
+        const key = `uploads/${Date.now()}-${uuidv4()}-${file.originalname}`;
+        await s3.send(new PutObjectCommand({
             Bucket: BUCKET_NAME,
-            Key: `uploads/${Date.now()}-${uuidv4()}-${file.originalname}`,
+            Key: key,
             Body: file.buffer,
             ContentType: file.mimetype,
             ACL: 'public-read'
-        };
-
-        const result = await s3.upload(params).promise();
+        }));
         return {
-            url: result.Location,
-            key: result.Key,
-            filename: path.basename(result.Key)
+            url: getVideoUrl(key),
+            key,
+            filename: path.basename(key)
         };
     } catch (error) {
         console.error('S3 upload error:', error);
@@ -48,59 +35,36 @@ const uploadVideo = async (file) => {
     }
 };
 
-// Download video from S3
+// Download full object and send (small files)
 const downloadVideo = async (key, res) => {
     try {
-        const params = {
-            Bucket: BUCKET_NAME,
-            Key: key
-        };
-
-        const object = await s3.getObject(params).promise();
-        
-        // Set headers for download
-        res.setHeader('Content-Type', 'video/mp4');
+        const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+        res.setHeader('Content-Type', obj.ContentType || 'video/mp4');
         res.setHeader('Content-Disposition', `attachment; filename="${path.basename(key)}"`);
-        res.setHeader('Content-Length', object.ContentLength);
-        
-        // Send video data
-        res.send(object.Body);
+        if (obj.ContentLength != null) res.setHeader('Content-Length', obj.ContentLength.toString());
+        obj.Body.pipe(res);
     } catch (error) {
         console.error('S3 download error:', error);
         throw new Error('Failed to download video from cloud storage');
     }
 };
 
-// Stream video from S3
+// Stream video (pipes the body)
 const streamVideo = async (key, res) => {
     try {
-        const params = {
-            Bucket: BUCKET_NAME,
-            Key: key
-        };
-
-        // Set headers for streaming
-        res.setHeader('Content-Type', 'video/mp4');
+        const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+        res.setHeader('Content-Type', obj.ContentType || 'video/mp4');
         res.setHeader('Accept-Ranges', 'bytes');
-
-        // Create readable stream from S3
-        const s3Stream = s3.getObject(params).createReadStream();
-        s3Stream.pipe(res);
+        obj.Body.pipe(res);
     } catch (error) {
         console.error('S3 stream error:', error);
         throw new Error('Failed to stream video from cloud storage');
     }
 };
 
-// Delete video from S3
 const deleteVideo = async (key) => {
     try {
-        const params = {
-            Bucket: BUCKET_NAME,
-            Key: key
-        };
-
-        await s3.deleteObject(params).promise();
+        await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
         return true;
     } catch (error) {
         console.error('S3 delete error:', error);
@@ -108,16 +72,6 @@ const deleteVideo = async (key) => {
     }
 };
 
-// Get video URL
-const getVideoUrl = (key) => {
-    return `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`;
-};
+const getVideoUrl = (key) => `https://${BUCKET_NAME}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 
-module.exports = {
-    s3Storage,
-    uploadVideo,
-    downloadVideo,
-    streamVideo,
-    deleteVideo,
-    getVideoUrl
-};
+module.exports = { uploadVideo, downloadVideo, streamVideo, deleteVideo, getVideoUrl };

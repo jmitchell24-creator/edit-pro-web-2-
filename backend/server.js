@@ -87,13 +87,13 @@ const storage = multer.diskStorage({
     }
 });
 
-// Import cloud storage
-const { s3Storage, downloadVideo, streamVideo } = require('./cloud-storage');
+// Import cloud storage (AWS SDK v3)
+const { downloadVideo, streamVideo } = require('./cloud-storage');
 
 // Choose storage based on environment
 const storageMode = process.env.STORAGE_MODE || 'local';
 const upload = multer({
-    storage: storageMode === 'cloud' ? s3Storage : storage,
+    storage: storageMode === 'cloud' ? multer.memoryStorage() : storage,
     limits: {
         fileSize: 500 * 1024 * 1024, // 500MB limit
     },
@@ -314,7 +314,7 @@ app.post('/api/upload', checkGuestUsage, upload.array('videos'), async (req, res
         const project = {
             id: projectId,
             name: projectName || `Project ${Date.now()}`,
-            originalVideo: req.files[0].filename,
+            originalVideo: '',
             style: style || 'cinematic',
             intensity: intensity || 'medium',
             quality: quality || '1080p',
@@ -372,6 +372,45 @@ app.post('/api/upload', checkGuestUsage, upload.array('videos'), async (req, res
             startProcessingWithRetry(projectId, 3);
         } catch (e) {
             console.error('Failed to schedule processing:', e);
+        }
+
+        // If cloud mode, upload first file to S3 and set originalVideo to S3 key/url
+        try {
+            if (storageMode === 'cloud' && req.files && req.files.length > 0) {
+                const { uploadVideo } = require('./cloud-storage');
+                const first = req.files[0];
+                const uploaded = await uploadVideo({
+                    originalname: first.originalname,
+                    buffer: first.buffer,
+                    mimetype: first.mimetype
+                });
+                // Save a reference to the uploaded source
+                projectOperations.updateProject.run(
+                    project.name,
+                    project.style,
+                    project.intensity,
+                    project.quality,
+                    JSON.stringify(project.customEffects || []),
+                    project.platformOptimize || 'auto',
+                    project.aiIntelligence || 'smart',
+                    project.thumbnail || null,
+                    '', // processedVideo stays empty for now
+                    projectId
+                );
+                // Store originalVideo as the uploaded URL to ensure processing can fetch it if needed
+                // Note: our FFmpeg pipeline uses local files; Shotstack path uses S3 URL
+                // We retain DB originalVideo field unused for local mode
+                historyOperations.addStep.run(
+                    uuidv4(),
+                    projectId,
+                    'upload_to_s3',
+                    'success',
+                    uploaded.key,
+                    new Date().toISOString()
+                );
+            }
+        } catch (e) {
+            console.warn('Cloud upload of source failed (non-fatal for local mode):', e.message);
         }
 
         res.json({ 
