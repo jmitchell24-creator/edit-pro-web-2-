@@ -1015,6 +1015,18 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="lengthSelect">Target Length</label>
+                        <select id="lengthSelect" required>
+                            <option value="auto">⚙️ Auto</option>
+                            <option value="15">⏱️ 15s</option>
+                            <option value="30">⏱️ 30s</option>
+                            <option value="45">⏱️ 45s</option>
+                            <option value="60">⏱️ 60s</option>
+                            <option value="90">⏱️ 90s</option>
+                            <option value="120">⏱️ 120s</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="qualitySelect">Output Quality</label>
                         <select id="qualitySelect" required>
                             <option value="720p">📺 720p (Fast)</option>
@@ -1770,6 +1782,8 @@
             formData.append('style', style);
             formData.append('intensity', intensity);
             formData.append('quality', quality);
+            const targetLength = document.getElementById('lengthSelect') ? document.getElementById('lengthSelect').value : 'auto';
+            formData.append('targetLength', targetLength);
             
             // Add advanced options
             if (musicFile) {

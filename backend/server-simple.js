@@ -15,6 +15,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// Serve uploaded files via /uploads URL
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Create uploads and projects directories
 const uploadsDir = path.join(__dirname, 'uploads');
 const projectsDir = path.join(__dirname, 'projects');

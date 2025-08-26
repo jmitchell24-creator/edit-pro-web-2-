@@ -73,6 +73,9 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Serve static files from parent directory (for dashboard.html)
 app.use(express.static(path.join(__dirname, '..')));
 
+// Serve uploaded files via /uploads URL
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Create uploads and projects directories
 const uploadsDir = path.join(__dirname, 'uploads');
 const projectsDir = path.join(__dirname, 'projects');
@@ -312,19 +315,29 @@ app.post('/api/upload', checkGuestUsage, upload.array('videos'), async (req, res
             projectName,
             customEffects,
             platformOptimize,
-            aiIntelligence
+            aiIntelligence,
+            targetLength
         } = req.body;
         
+        // Determine original video filename for local storage mode
+        const localOriginal = (storageMode === 'cloud') ? '' : ((req.files && req.files[0] && req.files[0].filename) ? req.files[0].filename : '');
+
         // Create new project
         const projectId = uuidv4();
         const project = {
             id: projectId,
             name: projectName || `Project ${Date.now()}`,
-            originalVideo: '',
+            originalVideo: localOriginal,
             style: style || 'cinematic',
             intensity: intensity || 'medium',
             quality: quality || '1080p',
-            customEffects: customEffects ? JSON.parse(customEffects) : [],
+            customEffects: (() => {
+                const base = customEffects ? JSON.parse(customEffects) : [];
+                if (targetLength && targetLength !== 'auto') {
+                    base.push({ type: 'targetLength', seconds: Number(targetLength) });
+                }
+                return base;
+            })(),
             platformOptimize: platformOptimize || 'auto',
             aiIntelligence: aiIntelligence || 'smart',
             status: 'uploaded',
@@ -1163,7 +1176,17 @@ async function processVideoWithAI(projectId) {
             // Ensure remote URL for local file (uploads to S3)
             const inputUrl = await shotstack.ensureRemoteUrlForLocalFile(inputPath, project.originalVideo);
             await updateProgress(82, 'Submitting cloud render...');
-            const jobId = await shotstack.submitRenderFromUrl(inputUrl, project.style, project.quality);
+            // Parse target length from customEffects or request body if present
+            let targetSeconds = undefined;
+            try {
+                const effects = project.customEffects ? (Array.isArray(project.customEffects) ? project.customEffects : JSON.parse(project.customEffects)) : [];
+                const lenEntry = effects.find && effects.find(e => e && e.type === 'targetLength');
+                if (lenEntry && lenEntry.seconds) targetSeconds = Number(lenEntry.seconds);
+            } catch (_) {}
+            if (!targetSeconds && typeof req !== 'undefined' && req.body && req.body.targetLength && req.body.targetLength !== 'auto') {
+                targetSeconds = Number(req.body.targetLength);
+            }
+            const jobId = await shotstack.submitRenderFromUrl(inputUrl, project.style, project.quality, targetSeconds);
             await updateProgress(90, 'Rendering in the cloud...');
             const result = await shotstack.pollUntilComplete(jobId, { intervalMs: 4000, timeoutMs: 12 * 60 * 1000 });
             if (!result.success || !result.url) {

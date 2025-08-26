@@ -22,7 +22,7 @@ async function http(method, url, body) {
     return res.json();
 }
 
-function buildTimeline(inputUrl, style, quality) {
+function buildTimeline(inputUrl, style, quality, targetSeconds) {
     // Minimal timeline that renders the source video with optional filter
     const filtersByStyle = {
         cinematic: 'boost',
@@ -40,6 +40,7 @@ function buildTimeline(inputUrl, style, quality) {
     };
     const resolution = resolutionMap[quality] || 'hd';
 
+    const clipLength = (typeof targetSeconds === 'number' && targetSeconds > 0) ? targetSeconds : 10;
     return {
         timeline: {
             background: '#000000',
@@ -52,7 +53,7 @@ function buildTimeline(inputUrl, style, quality) {
                                 src: inputUrl,
                             },
                             start: 0,
-                            length: 10,
+                            length: clipLength,
                             fit: 'cover',
                             filter,
                         },
@@ -67,8 +68,8 @@ function buildTimeline(inputUrl, style, quality) {
     };
 }
 
-async function submitRenderFromUrl(inputUrl, style, quality) {
-    const payload = buildTimeline(inputUrl, style, quality);
+async function submitRenderFromUrl(inputUrl, style, quality, targetSeconds) {
+    const payload = buildTimeline(inputUrl, style, quality, targetSeconds);
     const data = await http('POST', `${SHOTSTACK_BASE_URL}/render`, payload);
     return data.response && data.response.id ? data.response.id : data.id;
 }
@@ -96,7 +97,16 @@ async function pollUntilComplete(id, { intervalMs = 3000, timeoutMs = 5 * 60 * 1
 }
 
 async function ensureRemoteUrlForLocalFile(localFilePath, originalName) {
-    // Upload to S3 and return public URL
+    const storageMode = process.env.STORAGE_MODE || 'local';
+    const publicBase = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '');
+
+    // If using local storage and PUBLIC_BASE_URL is provided, build a direct URL to /uploads
+    if (storageMode !== 'cloud' && publicBase) {
+        const filename = originalName || path.basename(localFilePath);
+        return `${publicBase}/uploads/${encodeURIComponent(filename)}`;
+    }
+
+    // Fallback: upload to S3 and return public URL
     const buffer = await fs.readFile(localFilePath);
     const file = {
         originalname: originalName || path.basename(localFilePath),
