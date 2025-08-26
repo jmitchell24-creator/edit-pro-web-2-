@@ -85,6 +85,30 @@ fs.ensureDirSync(uploadsDir);
 fs.ensureDirSync(projectsDir);
 fs.ensureDirSync(editedDir);
 
+// Lightweight single-file upload handler (field name: 'file') that returns a direct URL
+// If no 'file' is provided, this falls through to the multi-upload route below
+const singleStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadsDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        const name = path.basename(file.originalname, ext);
+        cb(null, `${name}-${Date.now()}${ext}`);
+    }
+});
+const uploadSingle = multer({ storage: singleStorage });
+
+app.post('/api/upload', (req, res, next) => {
+    uploadSingle.single('file')(req, res, (err) => {
+        if (err) return next(err);
+        // If no 'file' field provided, let the multi-file handler process it
+        if (!req.file) return next();
+
+        const base = (process.env.PUBLIC_BASE_URL || '').replace(/\/$/, '') || `${req.protocol}://${req.get('host')}`;
+        const fileUrl = `${base}/uploads/${encodeURIComponent(req.file.filename)}`;
+        return res.json({ success: true, url: fileUrl });
+    });
+});
+
 // Configure multer for video uploads
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
