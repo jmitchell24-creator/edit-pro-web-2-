@@ -367,10 +367,17 @@ app.post('/api/upload', checkGuestUsage, upload.array('videos'), async (req, res
             return res.status(500).json({ error: 'Failed to save project to database' });
         }
 
+        // Trigger processing automatically (non-blocking)
+        try {
+            startProcessingWithRetry(projectId, 3);
+        } catch (e) {
+            console.error('Failed to schedule processing:', e);
+        }
+
         res.json({ 
             success: true, 
             projectId: projectId,
-            message: 'Video uploaded successfully!'
+            message: 'Video uploaded successfully! Processing started.'
         });
 
     } catch (error) {
@@ -509,17 +516,7 @@ app.post('/api/projects/:id/process', (req, res) => {
         );
 
         const projectId = req.params.id;
-        const useSimulation = process.env.AI_MODE === 'simulate';
-
-        if (useSimulation) {
-            simulateAIProcessing(projectId);
-        } else {
-            // Try real FFmpeg-based processing; fallback to simulation on failure
-            processVideoWithAI(projectId).catch(err => {
-                console.error('Real AI processing failed, falling back to simulation:', err.message);
-                simulateAIProcessing(projectId);
-            });
-        }
+        startProcessingWithRetry(projectId, 3);
 
         res.json({ success: true, message: 'AI processing started', project });
     } catch (error) {
@@ -969,6 +966,34 @@ try {
     shotstack = require('./shotstack');
 } catch (e) {
     console.warn('Shotstack module not available:', e.message);
+}
+
+// Helper: start processing with retry and fallback
+async function startProcessingWithRetry(projectId, retries = 3) {
+    const useSimulation = process.env.AI_MODE === 'simulate';
+
+    const run = async () => {
+        if (useSimulation) {
+            simulateAIProcessing(projectId);
+            return;
+        }
+        await processVideoWithAI(projectId);
+    };
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+        try {
+            await run();
+            return;
+        } catch (err) {
+            console.error(`Processing attempt ${attempt} failed for ${projectId}:`, err.message);
+            if (attempt === retries) {
+                console.error('Max retries reached; falling back to simulation');
+                try { simulateAIProcessing(projectId); } catch (_) {}
+            } else {
+                await new Promise(r => setTimeout(r, 1000 * attempt));
+            }
+        }
+    }
 }
 
 // Real AI Processing with FFmpeg
