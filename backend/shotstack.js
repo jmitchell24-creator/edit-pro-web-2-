@@ -123,4 +123,75 @@ module.exports = {
     ensureRemoteUrlForLocalFile,
 };
 
+// New simplified render function using prompt-based request (per user spec)
+async function renderWithPromptFromUrl(inputUrl, style, quality, targetSeconds) {
+    const resolutionByQuality = {
+        '720p': '720',
+        '1080p': '1080',
+        '4k': '2160',
+        '8k': '4320',
+    };
+    const resolution = resolutionByQuality[quality] || '1080';
+    const length = (typeof targetSeconds === 'number' && targetSeconds > 0) ? targetSeconds : 10;
+
+    const body = {
+        timeline: {
+            tracks: [
+                {
+                    clips: [
+                        {
+                            asset: {
+                                type: 'upload',
+                                src: inputUrl,
+                            },
+                            start: 0,
+                            length,
+                        },
+                    ],
+                },
+            ],
+        },
+        output: {
+            format: 'mp4',
+            resolution,
+        },
+        prompt: `
+      You are an AI video editor.
+      The user uploads a video. Your task is to automatically edit it for social media.
+
+      Editing steps:
+      1. Trim long pauses and silences.
+      2. Add smooth transitions between cuts.
+      3. Auto-generate subtitles (white text, bottom center).
+      4. Sync cuts to background music if provided.
+      5. Normalize audio and reduce noise.
+      6. Export as MP4, 1080p, optimized for Instagram/TikTok.
+
+      Output:
+      - Provide a downloadable link to the final video.
+      - Provide a JSON summary with:
+        • Scenes detected
+        • Transcript
+        • Effects applied
+    `,
+    };
+
+    const res = await fetch(`${SHOTSTACK_BASE_URL}/render`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': SHOTSTACK_API_KEY,
+        },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Shotstack prompt render failed: ${res.status} ${text}`);
+    }
+    const result = await res.json();
+    return { success: true, url: result.outputUrl || result.url || null, raw: result };
+}
+
+module.exports.renderWithPromptFromUrl = renderWithPromptFromUrl;
+
 

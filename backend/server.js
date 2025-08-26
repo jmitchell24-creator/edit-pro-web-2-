@@ -1186,11 +1186,11 @@ async function processVideoWithAI(projectId) {
             if (!targetSeconds && typeof req !== 'undefined' && req.body && req.body.targetLength && req.body.targetLength !== 'auto') {
                 targetSeconds = Number(req.body.targetLength);
             }
-            const jobId = await shotstack.submitRenderFromUrl(inputUrl, project.style, project.quality, targetSeconds);
+            // Use simplified prompt-based render that returns output URL
+            const result = await shotstack.renderWithPromptFromUrl(inputUrl, project.style, project.quality, targetSeconds);
             await updateProgress(90, 'Rendering in the cloud...');
-            const result = await shotstack.pollUntilComplete(jobId, { intervalMs: 4000, timeoutMs: 12 * 60 * 1000 });
             if (!result.success || !result.url) {
-                throw new Error(`Cloud render failed: ${result.status?.status || 'unknown'}`);
+                throw new Error('Cloud render failed: no output URL');
             }
 
             // Try to persist the edited video locally in /edited
