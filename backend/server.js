@@ -968,6 +968,59 @@ try {
     console.warn('Shotstack module not available:', e.message);
 }
 
+// Optional: Webhook endpoint for cloud renderers (e.g., Shotstack)
+// Configure your renderer to call this URL with ?projectId=YOUR_PROJECT_ID
+app.post('/api/render/webhook', async (req, res) => {
+    try {
+        const payload = req.body || {};
+        const status = payload?.response?.status || payload?.status;
+        const jobId = payload?.response?.id || payload?.id;
+        const outputUrl = payload?.response?.output?.url || (payload?.response?.assets || []).find(a => a.type === 'video')?.url;
+        const projectId = req.query.projectId || payload?.response?.meta?.projectId || payload?.meta?.projectId;
+
+        console.log('📩 Render webhook received:', { status, jobId, projectId, hasUrl: !!outputUrl });
+
+        if (!projectId) {
+            // Accept but cannot associate
+            return res.status(202).json({ received: true, note: 'No projectId provided' });
+        }
+
+        const project = projectOperations.getProjectById.get(projectId);
+        if (!project) {
+            return res.status(404).json({ error: 'Project not found' });
+        }
+
+        if (status === 'done' && outputUrl) {
+            // Save remote URL on project and mark complete
+            projectOperations.updateProject.run(
+                project.name,
+                project.style,
+                project.intensity,
+                project.quality,
+                JSON.stringify(project.customEffects || []),
+                project.platformOptimize || 'auto',
+                project.aiIntelligence || 'smart',
+                project.thumbnail || `thumbnail-${project.id}.jpg`,
+                outputUrl,
+                projectId
+            );
+            projectOperations.updateProjectStatus.run('completed', 100, 'Processing completed via webhook', projectId);
+            return res.json({ success: true });
+        }
+
+        if (status === 'failed' || status === 'error' || status === 'cancelled') {
+            projectOperations.updateProjectStatus.run('error', 0, `Render failed (${status})`, projectId);
+            return res.json({ success: true, error: status });
+        }
+
+        // Still processing
+        return res.status(202).json({ received: true, status: status || 'unknown' });
+    } catch (error) {
+        console.error('Webhook error:', error);
+        return res.status(500).json({ error: 'Webhook handler error' });
+    }
+});
+
 // Helper: start processing with retry and fallback
 async function startProcessingWithRetry(projectId, retries = 3) {
     const useSimulation = process.env.AI_MODE === 'simulate';
