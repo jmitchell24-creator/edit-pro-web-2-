@@ -1116,6 +1116,21 @@
         document.addEventListener('DOMContentLoaded', function() {
             loadProjects();
             updateStats();
+            // Disable upload button until a file is chosen
+            try {
+                const uploadBtn = document.getElementById('uploadBtn');
+                const uploadInput = document.getElementById('videoInput');
+                if (uploadBtn && uploadInput) {
+                    uploadBtn.disabled = true;
+                    uploadInput.addEventListener('change', () => {
+                        if (uploadInput.files && uploadInput.files.length > 0) {
+                            uploadBtn.disabled = false;
+                        } else {
+                            uploadBtn.disabled = true;
+                        }
+                    });
+                }
+            } catch (_) {}
         });
 
         // Load projects from API
