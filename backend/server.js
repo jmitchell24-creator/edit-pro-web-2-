@@ -1029,26 +1029,68 @@ app.get('/api/analytics/system', authenticateToken, async (req, res) => {
 // Prompt-based AI video edit endpoint (Shotstack)
 app.post('/api/edit-video', async (req, res) => {
     try {
-        const { videoUrl, length, quality } = req.body || {};
+        const { videoUrl } = req.body || {};
 
         if (!videoUrl) {
             return res.status(400).json({ error: 'No video URL provided' });
         }
 
-        // Use provided length if numeric, else undefined (Shotstack helper defaults)
-        const targetSeconds = (length && length !== 'auto') ? Number(length) : undefined;
-        const desiredQuality = quality || '1080p';
+        const apiBase = process.env.SHOTSTACK_BASE_URL || 'https://api.shotstack.io/stage';
+        const response = await fetch(`${apiBase}/render`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': process.env.SHOTSTACK_API_KEY
+            },
+            body: JSON.stringify({
+                timeline: {
+                    tracks: [
+                        {
+                            clips: [
+                                {
+                                    asset: {
+                                        type: 'upload',
+                                        src: videoUrl
+                                    },
+                                    start: 0,
+                                    length: 10
+                                }
+                            ]
+                        }
+                    ]
+                },
+                output: {
+                    format: 'mp4',
+                    resolution: '1080'
+                },
+                prompt: `
+          You are an AI video editor.
+          The user uploads a video. Your task is to automatically edit it for social media.
 
-        // Submit prompt-based render request
-        if (!shotstack || typeof shotstack.renderWithPromptFromUrl !== 'function') {
-            return res.status(503).json({ error: 'Cloud renderer not available' });
-        }
-        const result = await shotstack.renderWithPromptFromUrl(videoUrl, 'cinematic', desiredQuality, targetSeconds);
+          Editing steps:
+          1. Trim long pauses and silences.
+          2. Add smooth transitions between cuts.
+          3. Auto-generate subtitles (white text, bottom center).
+          4. Sync cuts to background music if provided.
+          5. Normalize audio and reduce noise.
+          6. Export as MP4, 1080p, optimized for Instagram/TikTok.
+
+          Output:
+          - Provide a downloadable link to the final video.
+          - Provide a JSON summary with:
+            • Scenes detected
+            • Transcript
+            • Effects applied
+        `
+            })
+        });
+
+        const result = await response.json();
 
         return res.json({
             success: true,
-            videoLink: result.url || null,
-            details: result.raw || result
+            videoLink: result.outputUrl || null,
+            details: result.data || result
         });
     } catch (err) {
         console.error('Error editing video:', err);
