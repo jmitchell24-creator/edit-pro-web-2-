@@ -1,9 +1,13 @@
 const express = require('express');
+const path = require('path');
+// Load environment variables from root config.env if present
+try {
+    require('dotenv').config({ path: require('path').join(__dirname, '..', 'config.env') });
+} catch (_) {}
 const multer = require('multer');
 const cors = require('cors');
 const helmet = require('helmet');
 const fs = require('fs-extra');
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const AIVideoProcessor = require('./ai-processor');
 const { projectOperations, historyOperations, guestUsageOperations, subscriptionOperations } = require('./database');
