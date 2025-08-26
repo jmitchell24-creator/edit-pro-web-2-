@@ -76,9 +76,11 @@ app.use(express.static(path.join(__dirname, '..')));
 // Create uploads and projects directories
 const uploadsDir = path.join(__dirname, 'uploads');
 const projectsDir = path.join(__dirname, 'projects');
+const editedDir = path.join(__dirname, 'edited');
 
 fs.ensureDirSync(uploadsDir);
 fs.ensureDirSync(projectsDir);
+fs.ensureDirSync(editedDir);
 
 // Configure multer for video uploads
 const storage = multer.diskStorage({
@@ -648,8 +650,12 @@ app.get('/api/projects/:id/download', async (req, res) => {
                 return;
             }
             
-            // Fallback to local storage
-            const videoPath = path.join(projectsDir, project.processedVideo);
+            // Fallback to local storage (check both projects and edited directories)
+            let videoPath = path.join(projectsDir, project.processedVideo);
+            if (!fs.existsSync(videoPath)) {
+                const editedPath = path.join(editedDir, project.processedVideo);
+                if (fs.existsSync(editedPath)) videoPath = editedPath;
+            }
             console.log(`📁 Looking for video at: ${videoPath}`);
             
             if (!fs.existsSync(videoPath)) {
@@ -708,7 +714,12 @@ app.get('/api/projects/:id/video', async (req, res) => {
             await streamVideo(project.processedVideoKey, res);
         } else {
             // Fallback to local storage
-            const videoPath = path.join(projectsDir, project.processedVideo);
+            // Fallback to local storage (projects or edited)
+            let videoPath = path.join(projectsDir, project.processedVideo);
+            if (!fs.existsSync(videoPath)) {
+                const editedPath = path.join(editedDir, project.processedVideo);
+                if (fs.existsSync(editedPath)) videoPath = editedPath;
+            }
             if (!fs.existsSync(videoPath)) {
                 return res.status(404).json({ error: 'Video file not found' });
             }
@@ -1159,7 +1170,23 @@ async function processVideoWithAI(projectId) {
                 throw new Error(`Cloud render failed: ${result.status?.status || 'unknown'}`);
             }
 
-            // Save remote URL on project (processedVideoKey used for cloud mode)
+            // Try to persist the edited video locally in /edited
+            let processedField = result.url; // default to remote URL
+            try {
+                const resp = await fetch(result.url);
+                if (resp.ok) {
+                    const arrayBuffer = await resp.arrayBuffer();
+                    const buffer = Buffer.from(arrayBuffer);
+                    const localEditedName = `edited-${project.id}.mp4`;
+                    const localEditedPath = path.join(editedDir, localEditedName);
+                    fs.writeFileSync(localEditedPath, buffer);
+                    processedField = localEditedName; // switch to local filename
+                }
+            } catch (saveErr) {
+                console.warn('Could not save edited file locally, will use remote URL:', saveErr.message);
+            }
+
+            // Save processed field (local filename if saved, else remote URL)
             projectOperations.updateProject.run(
                 project.name,
                 project.style,
@@ -1169,7 +1196,7 @@ async function processVideoWithAI(projectId) {
                 project.platformOptimize || 'auto',
                 project.aiIntelligence || 'smart',
                 project.thumbnail || 'demo-thumbnail.jpg',
-                result.url, // store URL directly for now
+                processedField,
                 projectId
             );
         } else {
