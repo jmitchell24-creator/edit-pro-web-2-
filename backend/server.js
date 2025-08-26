@@ -1026,6 +1026,36 @@ app.get('/api/analytics/system', authenticateToken, async (req, res) => {
     }
 });
 
+// Prompt-based AI video edit endpoint (Shotstack)
+app.post('/api/edit-video', async (req, res) => {
+    try {
+        const { videoUrl, length, quality } = req.body || {};
+
+        if (!videoUrl) {
+            return res.status(400).json({ error: 'No video URL provided' });
+        }
+
+        // Use provided length if numeric, else undefined (Shotstack helper defaults)
+        const targetSeconds = (length && length !== 'auto') ? Number(length) : undefined;
+        const desiredQuality = quality || '1080p';
+
+        // Submit prompt-based render request
+        if (!shotstack || typeof shotstack.renderWithPromptFromUrl !== 'function') {
+            return res.status(503).json({ error: 'Cloud renderer not available' });
+        }
+        const result = await shotstack.renderWithPromptFromUrl(videoUrl, 'cinematic', desiredQuality, targetSeconds);
+
+        return res.json({
+            success: true,
+            videoLink: result.url || null,
+            details: result.raw || result
+        });
+    } catch (err) {
+        console.error('Error editing video:', err);
+        return res.status(500).json({ error: 'AI video editing failed' });
+    }
+});
+
 // AI Video Processor instance
 const aiProcessor = new AIVideoProcessor();
 let shotstack;
